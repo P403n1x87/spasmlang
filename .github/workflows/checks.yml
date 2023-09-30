@@ -1,0 +1,54 @@
+name: Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  typing:
+    runs-on: "ubuntu-latest"
+
+    name: Typing
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - run: |
+          pip install hatch
+          hatch run lint:typing
+
+  format:
+    runs-on: "ubuntu-latest"
+
+    name: Formatting
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - run: |
+          pip install hatch
+          hatch run lint:fmt
+
+  style:
+    runs-on: "ubuntu-latest"
+
+    name: Style
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - run: |
+          pip install hatch
+          hatch run lint:style
+        

@@ -1,0 +1,43 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency: 
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        os: ["ubuntu", "macos", "windows"]
+
+    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}-dev
+
+      - name: Install dependencies
+        run: |
+          pip install hatch
+
+      - name: Run tests
+        timeout-minutes: 30
+        run: |
+          hatch run tests.py${{ matrix.python-version }}:test -svv
+  
+      - name: Publish coverage metrics
+        run: |
+          hatch run tests.py${{ matrix.python-version }}:cov
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
