@@ -9,7 +9,7 @@ description = 'Simple Python Assembly Language'
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
-keywords = []
+keywords = ["python", "assembly", "development"]
 authors = [{ name = "Gabriele N. Tornetta", email = "phoenix1987@gmail.com" }]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -24,9 +24,9 @@ classifiers = [
 dependencies = ["bytecode"]
 
 [project.urls]
-Documentation = "https://github.com/unknown/spasmlang#readme"
-Issues = "https://github.com/unknown/spasmlang/issues"
-Source = "https://github.com/unknown/spasmlang"
+Documentation = "https://github.com/P403n1x87/spasmlang#readme"
+Issues = "https://github.com/P403n1x87/spasmlang/issues"
+Source = "https://github.com/P403n1x87/spasmlang"
 
 [project.scripts]
 spasm = "spasm.__main__:main"
@@ -120,7 +120,7 @@ unfixable = [
 ]
 
 [tool.ruff.isort]
-known-first-party = ["spasmlang"]
+known-first-party = ["spasm"]
 
 [tool.ruff.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -130,14 +130,14 @@ ban-relative-imports = "all"
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 
 [tool.coverage.run]
-source_pkgs = ["spasmlang", "tests"]
+source_pkgs = ["spasm", "tests"]
 branch = true
 parallel = true
-omit = ["spasmlang/__about__.py"]
+omit = ["spasm/_version.py"]
 
 [tool.coverage.paths]
-spasmlang = ["spasmlang", "*/spasmlang/spasmlang"]
-tests = ["tests", "*/spasmlang/tests"]
+spasmlang = ["spasm"]
+tests = ["tests"]
 
 [tool.coverage.report]
 exclude_lines = ["no cov", "if __name__ == .__main__.:", "if TYPE_CHECKING:"]
