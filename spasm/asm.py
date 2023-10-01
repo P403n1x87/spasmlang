@@ -275,12 +275,15 @@ class Assembly:
         if self._ref_labels:
             raise ValueError("undefined labels: %s" % ", ".join(self._ref_labels))
 
-    def _parse_code(self, lines: t.Iterable[str]) -> None:
-        for line in lines:
+    def _parse_code(self, lines: t.Iterable[t.Tuple[int, str]]) -> None:
+        for n, line in lines:
             entry = self._parse_line(line)
 
             if isinstance(entry, CodeEnd):
                 break
+
+            if isinstance(entry, (bc.Instr, BaseOpArg)):
+                entry.lineno = n
 
             self._instrs.append(entry)
 
@@ -290,8 +293,8 @@ class Assembly:
 
         self._validate()
 
-    def _parse(self, lines: t.Iterable[str]) -> None:
-        for line in lines:
+    def _parse(self, lines: t.Iterable[t.Tuple[int, str]]) -> None:
+        for n, line in lines:
             entry = self._parse_line(line)
 
             if isinstance(entry, CodeBegin):
@@ -310,12 +313,19 @@ class Assembly:
                 msg = "code end outside of code block"
                 raise ValueError(msg)
 
+            if isinstance(entry, (bc.Instr, BaseOpArg)):
+                entry.lineno = n
+
             self._instrs.append(entry)
 
         self._validate()
 
     def parse(self, text: str) -> None:
-        self._parse(_ for _ in (_.strip() for _ in text.splitlines()) if _ and not _.startswith("#"))
+        self._parse(
+            (n, _)
+            for n, _ in ((n, _.strip()) for n, _ in enumerate(text.splitlines(), start=1))
+            if _ and not _.startswith("#")
+        )
 
     def bind(self, args: t.Optional[t.Dict[str, t.Any]] = None, lineno: t.Optional[int] = None) -> bc.Bytecode:
         if not self._bind_opargs and not self._code_refs:
