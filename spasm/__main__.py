@@ -31,9 +31,9 @@ def dump_code_to_file(code: CodeType, file: Path) -> None:
         stream.flush()
 
 
-def assemble(source: str, filename: str) -> CodeType:
-    asm = Assembly(name="<module>", filename=filename, lineno=1)
-    asm.parse(source)
+def assemble(sourcefile: Path) -> CodeType:
+    asm = Assembly(name="<module>", filename=str(sourcefile.resolve()), lineno=1)
+    asm.parse(sourcefile.read_text())
     return asm.compile()
 
 
@@ -47,7 +47,7 @@ def main() -> None:
 
     try:
         dump_code_to_file(
-            assemble(args.file.read_text(), str(args.file.resolve())),
+            assemble(args.file),
             args.file.with_suffix(".pyc"),
         )
     except Exception as e:
