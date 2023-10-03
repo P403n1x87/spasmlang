@@ -82,3 +82,28 @@ def test_assembly_sub_code():
     exec(asm.compile(), _globals)  # noqa: S102
 
     assert _globals["greet"]("World") == "World"
+
+
+@pytest.mark.skipif(sys.version_info[:2] < (3, 12), reason="CPython 3.12+ bytecode only")
+def test_assembly_load_attr_transformation():
+    asm = Assembly()
+
+    asm.parse(
+        r"""
+            resume                      0
+            load_const                  {arg}
+            load_method                 $foo
+            load_const                  {arg}
+            load_attr                   $foo
+            build_tuple                 3
+            return_value
+        """
+    )
+
+    class Foo:
+        def foo(self):
+            pass
+
+    f = Foo()
+
+    assert eval(asm.compile({"arg": f})) == (Foo.foo, f, f.foo)  # noqa: S307
