@@ -53,6 +53,17 @@ def relocate(instrs: bc.Bytecode, lineno: int) -> bc.Bytecode:
     return new_instrs
 
 
+def transform_instruction(opcode: str, arg: t.Any = bc.UNSET) -> t.Tuple[str, t.Any]:
+    if sys.version_info >= (3, 12):
+        if opcode.upper() == "LOAD_METHOD":
+            opcode = "LOAD_ATTR"
+            arg = (True, arg)
+        elif opcode.upper() == "LOAD_ATTR" and not isinstance(arg, tuple):
+            arg = (False, arg)
+
+    return opcode, arg
+
+
 class BaseOpArg(bc.Label):
     # We cannot have arbitrary objects in Bytecode, so we subclass Label
     def __init__(self, name: str, arg: str, lineno: t.Optional[int] = None) -> None:
@@ -236,7 +247,10 @@ class Assembly:
 
                 return entry
 
-        return bc.Instr(self._parse_opcode(opcode), *map(self._parse_opcode_arg, args), lineno=self._lineno)
+        return bc.Instr(
+            *transform_instruction(self._parse_opcode(opcode), *map(self._parse_opcode_arg, args)),
+            lineno=self._lineno,
+        )
 
     def _parse_code_begin(self, line: str) -> t.Optional[CodeBegin]:
         try:
