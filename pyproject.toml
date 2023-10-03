@@ -53,8 +53,11 @@ detached = true
 dependencies = ["black>=23.1.0", "mypy>=1.0.0", "ruff>=0.0.243"]
 [tool.hatch.envs.lint.scripts]
 typing = "mypy --install-types --non-interactive spasm {args}"
-style = ["ruff spasm/ {args}", "black --check --diff spasm/ {args}"]
-fmt = ["black spasm/ {args}", "ruff --fix spasm/ {args}", "style"]
+style = [
+  "ruff spasm/ tests/ {args}",
+  "black --check --diff spasm/ tests/ {args}",
+]
+fmt = ["black spasm/ tests/ {args}", "ruff --fix spasm/ tests/ {args}", "style"]
 all = ["style", "typing"]
 
 [tool.hatch.build.targets.sdist]
@@ -121,6 +124,7 @@ unfixable = [
 
 [tool.ruff.isort]
 known-first-party = ["spasm"]
+force-single-line = true
 
 [tool.ruff.flake8-tidy-imports]
 ban-relative-imports = "all"
