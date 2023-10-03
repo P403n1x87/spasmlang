@@ -15,7 +15,7 @@ def test_assembly_bind_args():
         """
     )
 
-    assert eval(asm.compile({"retval": 42})) == 42
+    assert eval(asm.compile({"retval": 42})) == 42  # noqa: S307
 
 
 @pytest.mark.skipif(sys.version_info[:2] != (3, 11), reason="CPython 3.11 bytecode only")
@@ -34,19 +34,19 @@ def test_assembly_exception_table():
             load_const                  Exception("Not the answer")
             raise_varargs               1
         tried
-        
+
         correct_answer:
             load_const                  None
             return_value
-        
+
         exception:
             push_exc_info
             return_value
         """
     )
 
-    assert eval(asm.compile({"answer": 42})) is None
-    assert isinstance(eval(asm.compile({"answer": 41})), Exception)
+    assert eval(asm.compile({"answer": 42})) is None  # noqa: S307
+    assert isinstance(eval(asm.compile({"answer": 41})), Exception)  # noqa: S307
 
 
 @pytest.mark.skipif(sys.version_info[:2] != (3, 11), reason="CPython 3.11 bytecode only")
@@ -79,6 +79,6 @@ def test_assembly_sub_code():
     )
 
     _globals = {}
-    exec(asm.compile(), _globals)
+    exec(asm.compile(), _globals)  # noqa: S102
 
     assert _globals["greet"]("World") == "World"

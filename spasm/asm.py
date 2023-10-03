@@ -32,6 +32,15 @@ from types import CodeType
 import bytecode as bc  # type: ignore[import]
 
 
+class SpasmParseError(Exception):
+    def __init__(self, filename, lineno):
+        self.filename = filename
+        self.lineno = lineno
+
+    def __str__(self):
+        return f"in {self.filename}, line {self.lineno}: {self.__cause__}"
+
+
 def relocate(instrs: bc.Bytecode, lineno: int) -> bc.Bytecode:
     new_instrs = bc.Bytecode()
     for i in instrs:
@@ -277,7 +286,10 @@ class Assembly:
 
     def _parse_code(self, lines: t.Iterable[t.Tuple[int, str]]) -> None:
         for n, line in lines:
-            entry = self._parse_line(line)
+            try:
+                entry = self._parse_line(line)
+            except Exception as e:
+                raise SpasmParseError(self._instrs.filename, n) from e
 
             if isinstance(entry, CodeEnd):
                 break
@@ -295,7 +307,10 @@ class Assembly:
 
     def _parse(self, lines: t.Iterable[t.Tuple[int, str]]) -> None:
         for n, line in lines:
-            entry = self._parse_line(line)
+            try:
+                entry = self._parse_line(line)
+            except Exception as e:
+                raise SpasmParseError(self._instrs.filename, n) from e
 
             if isinstance(entry, CodeBegin):
                 code = self._codes[entry.name] = Assembly(
