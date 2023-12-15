@@ -153,7 +153,7 @@ class Assembly:
         if not text.startswith("$"):
             return None
 
-        return self._parse_ident(text[1:])
+        return text[1:]
 
     def _parse_try_begin(self, line: str) -> t.Optional[bc.TryBegin]:
         try:
