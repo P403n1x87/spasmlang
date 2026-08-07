@@ -5,18 +5,60 @@ on:
     types: [published]
 
 jobs:
-  release:
+  # spasmlang bundles the spasm._core C++ extension, whose opcode tables are
+  # generated for the interpreter it is built against. There is no abi3 build,
+  # so every supported minor version needs its own wheel.
+  wheels:
+    name: Wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # setuptools-scm needs the tags
+
+      - uses: pypa/cibuildwheel@v2.21
+        env:
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    name: Source distribution
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - run: |
-          pip install hatch hatch-vcs
-          hatch build
-          hatch publish --user=__token__ --auth=${{ secrets.PYPI_TOKEN }}
+          pip install build
+          python -m build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  publish:
+    needs: [wheels, sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}

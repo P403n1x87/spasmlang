@@ -142,3 +142,6 @@ protoc*
 
 # Dynamic version file
 spasm/_version.py
+
+# Generated per-interpreter opcode tables (see setup.py)
+src/*_gen.h
