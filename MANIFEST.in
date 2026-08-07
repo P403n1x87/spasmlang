@@ -1,0 +1,11 @@
+include setup.py
+include LICENSE.txt
+
+# The extension sources. Headers have to be listed explicitly: setuptools only
+# picks up the .cpp files named in Extension(sources=...).
+recursive-include src *.cpp *.h
+recursive-include tests *.py
+
+# setup.py regenerates these for whichever interpreter is doing the build.
+# Shipping one would silently bake in the wrong opcode tables.
+exclude src/*_gen.h
