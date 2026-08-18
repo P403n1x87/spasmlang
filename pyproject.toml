@@ -1,7 +1,7 @@
 # spasmlang bundles a C++ extension (spasm._core), so the build backend has to
 # be able to compile one; setup.py generates the per-interpreter opcode tables.
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "packaging>=24.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
