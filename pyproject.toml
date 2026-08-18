@@ -53,7 +53,7 @@ spasm = ["py.typed", "_core.pyi"]
 version_file = "spasm/_version.py"
 
 [tool.hatch.envs.tests]
-dependencies = ["coverage[toml]>=6.5", "pytest", "tomli>=2; python_version<'3.11'"]
+dependencies = ["coverage[toml]>=6.5", "pytest", "hatchling", "tomli>=2; python_version<'3.11'"]
 [tool.hatch.envs.tests.scripts]
 test = "pytest {args:tests}"
 test-cov = "coverage run -m pytest {args:tests}"
