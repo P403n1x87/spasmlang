@@ -163,6 +163,9 @@ class Assembly:
         *,
         is_function: bool = False,
         is_nested: bool = False,
+        argnames: list[str] | None = None,
+        cellvars: list[str] | None = None,
+        freevars: list[str] | None = None,
     ) -> None:
         # Labels and protected regions are positions into the instruction
         # list, not entries in it, which is how the core models them too.
@@ -177,13 +180,13 @@ class Assembly:
         self._lineno = lineno
         self._is_function = is_function
         self._is_nested = is_nested
-        self._argnames: list[str] = []
+        self._argnames: list[str] = argnames or []
         # Variables this code object closes over: cells are locals captured by
         # a nested block, frees are captured from the enclosing one. Declared
         # in the block header rather than inferred, since nothing in the
         # instruction stream distinguishes the two.
-        self._cellvars: list[str] = []
-        self._freevars: list[str] = []
+        self._cellvars: list[str] = cellvars or []
+        self._freevars: list[str] = freevars or []
         self._bind_opargs: dict[int, BindOpArg] = {}
         self._codes: dict[str, Assembly] = {}
         self._code_refs: dict[int, CodeRefOpArg] = {}

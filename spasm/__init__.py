@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-from spasm.asm import Assembly
+from spasm._asm import Assembly
+from spasm.decorators import asm
+from spasm.inliner import inline
 
-__all__ = ["Assembly"]
+__all__ = ["Assembly", "asm", "inline"]

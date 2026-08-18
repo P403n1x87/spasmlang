@@ -30,8 +30,8 @@ from pathlib import Path
 from types import CodeType
 from types import ModuleType
 
+from spasm._asm import Assembly
 from spasm._pyc import code_to_pyc_bytes
-from spasm.asm import Assembly
 
 try:
     import tomllib  # type: ignore[import-not-found]
