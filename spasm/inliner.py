@@ -37,8 +37,12 @@ _F = t.TypeVar("_F", bound=t.Callable[..., t.Any])
 # Instructions allowed in the "push arguments" run between the callable load
 # and the call itself: single-value, side-effect-free pushes only. A nested
 # call, attribute access or jump in there takes the call site out of scope.
+# LOAD_SMALL_INT (3.14+) is how small integer constants are pushed instead of
+# LOAD_CONST.
 _SIMPLE_ARG_OPS = frozenset(
-    name for name in ("LOAD_FAST", "LOAD_CONST", "LOAD_FAST_CHECK", "LOAD_FAST_BORROW") if name in dis.opmap
+    name
+    for name in ("LOAD_FAST", "LOAD_CONST", "LOAD_FAST_CHECK", "LOAD_FAST_BORROW", "LOAD_SMALL_INT")
+    if name in dis.opmap
 )
 
 _HASLOCAL = frozenset(dis.haslocal)
@@ -47,15 +51,24 @@ _HASLOCAL = frozenset(dis.haslocal)
 # packs both varname indices as (idx1 << 4) | idx2 (see CPython's
 # compile.c). from_code() doesn't unpack that, so it's decoded here and
 # split back into the two plain instructions it came from.
+# LOAD_FAST_BORROW_LOAD_FAST_BORROW is 3.14's borrowed-reference variant of
+# LOAD_FAST_LOAD_FAST, encoded the same way.
 _PAIRED_LOCAL_OPS = {
     name: pair
     for name, pair in (
         ("LOAD_FAST_LOAD_FAST", ("LOAD_FAST", "LOAD_FAST")),
+        ("LOAD_FAST_BORROW_LOAD_FAST_BORROW", ("LOAD_FAST_BORROW", "LOAD_FAST_BORROW")),
         ("STORE_FAST_LOAD_FAST", ("STORE_FAST", "LOAD_FAST")),
         ("STORE_FAST_STORE_FAST", ("STORE_FAST", "STORE_FAST")),
     )
     if name in dis.opmap
 }
+
+# The subset of _PAIRED_LOCAL_OPS that are pure double-loads, safe to appear
+# in an argument-push run the same way LOAD_FAST_LOAD_FAST is.
+_PAIRED_ARG_PUSH_OPS = frozenset(
+    name for name, (op1, op2) in _PAIRED_LOCAL_OPS.items() if op1.startswith("LOAD") and op2.startswith("LOAD")
+)
 
 # LOAD_FAST_AND_CLEAR (comprehension-only) doesn't fit the abstraction model
 # either and has no simple unpacking; a callee containing one is left alone.
@@ -105,7 +118,7 @@ def _match_call_site(instrs: list[Instr], names: t.Sequence[str], start: int) ->
             return None
         if op_name in _SIMPLE_ARG_OPS:
             argcount += 1
-        elif op_name == "LOAD_FAST_LOAD_FAST":
+        elif op_name in _PAIRED_ARG_PUSH_OPS:
             # Pure double-push, no side effect — safe in an arg-push run.
             argcount += 2
         else:
@@ -178,7 +191,7 @@ def _arg_push_sources(arg_instrs: list[Instr], argcount: int) -> list[Instr | No
     sources: list[Instr | None] = [None] * argcount
     slot = 0
     for instr in arg_instrs:
-        if dis.opname[instr.op] == "LOAD_FAST_LOAD_FAST":
+        if dis.opname[instr.op] in _PAIRED_ARG_PUSH_OPS:
             slot += 2
         else:
             sources[slot] = instr
@@ -255,7 +268,7 @@ def _splice(
     kept_arg_instrs: list[Instr] = []
     slot = 0
     for instr in arg_instrs:
-        if dis.opname[instr.op] == "LOAD_FAST_LOAD_FAST":
+        if dis.opname[instr.op] in _PAIRED_ARG_PUSH_OPS:
             kept_arg_instrs.append(instr)
             slot += 2
         else:
