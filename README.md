@@ -19,6 +19,7 @@ Supports CPython 3.10 through 3.14, and has no runtime dependencies.
 - [Installation](#installation)
 - [Usage](#usage)
 - [Examples](#examples)
+- [Build backend](#build-backend)
 - [Low-level API](#low-level-api)
 - [Architecture](#architecture)
 - [License](#license)
@@ -32,6 +33,14 @@ pip install spasmlang
 
 Wheels are published for CPython 3.10–3.14 on Linux, macOS and Windows.
 Installing from source needs a C++17 compiler.
+
+Plain `spasmlang` has no runtime dependencies. The [build backend](#build-backend)
+is the one feature that needs a TOML parser on Python <3.11, so it lives
+behind an extra rather than being pulled in for everyone:
+
+```console
+pip install "spasmlang[buildbackend]"
+```
 
 
 ## Usage
@@ -193,6 +202,38 @@ CPython 3.11 a captured parameter occupies a single frame slot that is at once
 a local and a cell, and `MAKE_CELL` is what turns it into one. `inner` is
 reachable only from `outer`, since a nested block is a constant of the block it
 is written in and not of the module.
+
+
+## Build backend
+
+`spasm.buildbackend` is a [PEP 517](https://peps.python.org/pep-0517/) build
+backend wrapper: it builds the wheel exactly as some other backend (hatchling
+by default) already would, then rewrites that wheel so every `.py`/`.pya`
+file inside it is replaced with a compiled, sourceless `.pyc`. Everything
+else — metadata, versioning, sdist contents, editable installs — is forwarded
+to the wrapped backend untouched.
+
+```toml
+[build-system]
+requires = ["spasmlang[buildbackend]", "hatchling"]
+build-backend = "spasm.buildbackend"
+
+[tool.spasm.build]
+backend = "hatchling.build"   # optional, this is the default
+include = ["mypkg/*"]         # optional glob allowlist
+exclude = ["mypkg/generated/*"]  # optional glob denylist
+optimize = 0                  # optional, compile() optimization level
+```
+
+Because a `.pyc`'s magic number is interpreter-version-specific but nothing
+inside it is platform-specific, the wheel this produces is retagged
+`cp{XY}-none-any` — one wheel per Python minor version, any platform — rather
+than whatever platform tag the wrapped backend chose.
+
+C extensions inside the wrapped wheel are left untouched (only `.py`/`.pya`
+is compiled), and editable installs are passed through uncompiled entirely:
+there is no wheel artifact to post-process there, only `.pth`/redirect files
+pointing back at the source tree.
 
 
 ## Low-level API
