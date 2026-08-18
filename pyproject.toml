@@ -25,6 +25,13 @@ classifiers = [
 ]
 dependencies = []
 
+[project.optional-dependencies]
+# Only spasm.buildbackend needs a TOML parser (to read pyproject.toml's
+# [tool.spasm.build] config); everything else in the package doesn't. A
+# downstream project opts in with `requires = ["spasmlang[buildbackend]", ...]`
+# in its own [build-system] table.
+buildbackend = ["tomli>=2; python_version<'3.11'"]
+
 [project.urls]
 Documentation = "https://github.com/P403n1x87/spasmlang#readme"
 Issues = "https://github.com/P403n1x87/spasmlang/issues"
@@ -46,7 +53,7 @@ spasm = ["py.typed", "_core.pyi"]
 version_file = "spasm/_version.py"
 
 [tool.hatch.envs.tests]
-dependencies = ["coverage[toml]>=6.5", "pytest"]
+dependencies = ["coverage[toml]>=6.5", "pytest", "tomli>=2; python_version<'3.11'"]
 [tool.hatch.envs.tests.scripts]
 test = "pytest {args:tests}"
 test-cov = "coverage run -m pytest {args:tests}"
