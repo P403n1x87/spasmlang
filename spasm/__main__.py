@@ -4,6 +4,8 @@ from argparse import ArgumentParser
 from pathlib import Path
 from types import CodeType
 
+from spasm._asm import Assembly
+from spasm._asm import OpArg
 from spasm._pyc import PycUnmarshalError
 from spasm._pyc import PycWriteError
 from spasm._pyc import write_pyc
@@ -12,8 +14,6 @@ from spasm._pyc import write_pyc
 # from a fresh checkout; the ignore keeps mypy quiet there. It reads as unused
 # once the package has been built at least once.
 from spasm._version import __version__  # type: ignore[import]
-from spasm.asm import Assembly
-from spasm.asm import OpArg
 from spasm.bytecode import UNSET
 
 

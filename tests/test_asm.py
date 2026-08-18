@@ -4,7 +4,7 @@ import sys
 import pytest
 
 from spasm import Assembly
-from spasm.asm import SpasmParseError
+from spasm._asm import SpasmParseError
 from spasm.bytecode import CO_NESTED
 
 PY = sys.version_info[:2]

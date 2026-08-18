@@ -2,7 +2,7 @@ import pytest
 
 from spasm.__main__ import SpasmUnmarshalError
 from spasm.__main__ import spasm
-from spasm.asm import SpasmParseError
+from spasm._asm import SpasmParseError
 
 
 def test_spasm_unmarshallable(tmp_path):

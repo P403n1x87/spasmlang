@@ -15,7 +15,7 @@ structure:
   built from scratch,
 * :data:`UNSET`, the "this instruction takes no argument" sentinel.
 
-Keeping these here rather than in :mod:`spasm.asm` means anything building on
+Keeping these here rather than in :mod:`spasm._asm` means anything building on
 the core gets them, and the assembler stays about assembly.
 """
 
@@ -39,6 +39,7 @@ __all__ = [
     "Instr",
     "Label",
     "compare_oparg",
+    "decode_name_arg",
     "encode_name_arg",
     "infer_flags",
 ]
@@ -201,6 +202,13 @@ def encode_name_arg(code: Bytecode, opname: str, name: str, *, flag: bool = Fals
     if (opname == "LOAD_GLOBAL" and PY311) or (opname == "LOAD_ATTR" and PY312):
         return (index << 1) | int(bool(flag))
     return index
+
+
+def decode_name_arg(names: t.Sequence[str], opname: str, arg: int) -> tuple[str, bool]:
+    """Inverse of :func:`encode_name_arg`: unpack a name and its flag bit from an oparg."""
+    if (opname == "LOAD_GLOBAL" and PY311) or (opname == "LOAD_ATTR" and PY312):
+        return names[arg >> 1], bool(arg & 1)
+    return names[arg], False
 
 
 # ---------------------------------------------------------------------------

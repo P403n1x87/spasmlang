@@ -19,6 +19,8 @@ Supports CPython 3.10 through 3.14, and has no runtime dependencies.
 - [Installation](#installation)
 - [Usage](#usage)
 - [Examples](#examples)
+- [In-source assembly](#in-source-assembly)
+- [Bytecode inlining](#bytecode-inlining)
 - [Build backend](#build-backend)
 - [Low-level API](#low-level-api)
 - [Architecture](#architecture)
@@ -202,6 +204,126 @@ CPython 3.11 a captured parameter occupies a single frame slot that is at once
 a local and a cell, and `MAKE_CELL` is what turns it into one. `inner` is
 reachable only from `outer`, since a nested block is a constant of the block it
 is written in and not of the module.
+
+
+## In-source assembly
+
+Writing assembly in its own `.pya` file works well for a whole module, but
+sometimes only one function needs to drop to bytecode and the rest of the
+file is ordinary Python. `spasm.asm` lets that function keep its assembly
+right where it is defined, in its own docstring:
+
+```python
+import spasm
+
+@spasm.asm(retval=42)
+def answer():
+    """
+    resume 0
+    load_const {retval}
+    return_value
+    """
+
+assert answer() == 42
+```
+
+At decoration time, `asm` parses the docstring as assembly (through the same
+`Assembly` the `spasm` CLI and `.pya` files use), compiles it, replaces
+`answer.__code__` with the result, and clears `__doc__` — it held source, not
+documentation.
+
+This one has two different, easily-confused kinds of "argument", so it's
+worth spelling out which is which:
+
+| | Resolved when | Reaches the assembly as |
+| --- | --- | --- |
+| `answer`'s own parameters (`def add(x, y):`) | Every call, from the caller's arguments | `load_fast`/`store_fast` on the parameter name, exactly as in a nested `code` block in a `.pya` file |
+| The decorator's keyword arguments (`retval=42` above) | Once, when `@spasm.asm(...)` runs | `{name}` placeholders in the docstring, substituted before it's assembled |
+
+The first is what `def add(x, y): ...` already means in Python — nothing
+`asm`-specific about it. The second is `Assembly.compile()`'s existing
+bind-args mechanism (the same one `.pya` files use), exposed here so the
+docstring can embed a compile-time constant without hardcoding it. It's easy
+to reach for the decorator's keyword arguments out of habit and expect them
+to behave like a call's arguments; they don't — they're baked into the
+compiled bytecode once, not read fresh from a call:
+
+```python
+@spasm.asm()
+def add(x, y):
+    """
+    resume 0
+    load_fast $x
+    load_fast $y
+    binary_op 0
+    return_value
+    """
+
+assert add(3, 4) == 7
+```
+
+`add`'s parameters (`x`, `y`) come straight from its own `def` line, so
+there's no `code NAME(args)` header to write. There is also no closure
+support: `*args`, `**kwargs`, keyword-only arguments and free/cell variables
+all raise `ValueError` at decoration time. A function that needs any of
+those still has the nested `code` block syntax available in a `.pya` file.
+
+
+## Bytecode inlining
+
+`spasm.inline` is a decorator for the *caller*, not the callee. A
+callee-side decorator would need to find and rewrite every call site across
+the codebase that happens to call it — other modules, other decorators
+already applied to those callers, code not even loaded yet — which is not
+something a decorator running once at callee-definition time can do.
+Decorating the caller sidesteps that entirely: the caller already knows
+which call sites are its own, so `inline` only ever rewrites the one code
+object it's attached to. It needs no cooperation from the function being
+inlined, only proof — checked structurally against the callee's own
+`__code__` — that inlining it is safe:
+
+```python
+import dis
+import spasm
+
+def add_one(x):
+    return x + 1
+
+@spasm.inline
+def compute(n):
+    return add_one(n) * 2
+
+assert compute(5) == 12
+assert not any(instr.opname.startswith("CALL") for instr in dis.get_instructions(compute))
+```
+
+At decoration time, it walks `compute`'s bytecode for call sites shaped like
+a module-level function call with a fixed number of simple positional
+arguments (`LOAD_GLOBAL` + plain `LOAD_FAST`/`LOAD_CONST` pushes + `CALL`),
+resolves the name against `compute.__globals__`, and checks the callee's own
+`__code__` for anything that would make splicing it in unsafe: a generator or
+coroutine, `*args`/`**kwargs`, a closure, an exception table, or a call to
+itself. Anything it can prove safe gets its body spliced directly into the
+caller in place of the call, with every `return` becoming a jump to a shared
+point after the splice. Anything it can't — a keyword argument, a starred
+call, a generator callee — is left exactly as it was, so `inline` is a pure
+optimization: it never changes what a caller returns, only whether it still
+contains a `CALL`.
+
+A parameter the callee never reassigns, pushed by a single `LOAD_FAST` or
+`LOAD_CONST` in the caller, is substituted directly at each of its use sites
+instead of round-tripping through a dedicated local — so `add_one`'s `x`
+above becomes `n` directly rather than a copy of it. Only a callee-local
+variable computed inside the callee's own body still needs a slot of its own
+in the caller.
+
+On a tight loop calling a several-line function once per iteration, this
+typically shaves 10–15% off the loop's running time — call overhead is a
+meaningful fraction of a small function's cost, but not the only cost, so
+`inline` narrows that gap rather than closing it. Functions with only a
+handful of call sites, called rarely, will not see a measurable difference,
+and that's fine: `inline` returns a caller unchanged when it finds nothing
+worth splicing.
 
 
 ## Build backend
@@ -497,8 +619,11 @@ wheel per Python minor version rather than a single abi3 wheel.
 `spasm.bytecode` is a thin Python layer over it holding the parts that are
 version-dependent bookkeeping rather than data structure: the `Compare` and
 `BinaryOp` symbolic opargs and their per-version encodings, name-argument
-packing for `LOAD_GLOBAL`/`LOAD_ATTR`, and `co_flags` inference. `spasm.asm`
-builds on both and stays concerned with parsing and assembly.
+packing for `LOAD_GLOBAL`/`LOAD_ATTR`, and `co_flags` inference. `spasm._asm`
+builds on both and stays concerned with parsing and assembly; its `Assembly`
+class is re-exported as `spasm.Assembly` (and driven, for the docstring-based
+form, by the `spasm.asm` decorator) so nothing outside this package needs to
+import the private module directly.
 
 Stack depth (`co_stacksize`) is computed for you. Exception table entry depths
 are inferred too, but only where that can be done exactly — see the note in
