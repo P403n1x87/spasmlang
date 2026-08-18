@@ -9,10 +9,11 @@
 #define PY_312 0x030c0000
 #define PY_313 0x030d0000
 #define PY_314 0x030e0000
+#define PY_315 0x030f0000
 
 // ── Jump-arg encoding ────────────────────────────────────────────────────────
 // Since WORDCODE (3.6+), all jump args are *word* offsets (byte_offset / 2).
-// This applies across every version we support (3.10–3.14).
+// This applies across every version we support (3.10–3.15).
 #define ARG_TO_BYTE_OFFSET(arg)  ((arg) * 2)
 #define BYTE_OFFSET_TO_ARG(off)  ((off) / 2)
 
