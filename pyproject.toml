@@ -78,6 +78,10 @@ build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
 skip = "*_i686"
 test-command = "pytest {project}/tests"
 test-requires = ["pytest"]
+# cibuildwheel's pinned constraints for older interpreters (e.g. packaging==24.1
+# on cp310) predate setuptools>=77's packaging>=24.2 requirement for license
+# validation, so pinning here conflicts with the build-system requirement above.
+dependency-versions = "latest"
 
 [tool.ruff]
 target-version = "py310"
