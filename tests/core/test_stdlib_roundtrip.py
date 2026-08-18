@@ -122,8 +122,18 @@ def iter_code_objects(co, seen):
             yield from iter_code_objects(const, seen)
 
 
-def iter_callables(obj, depth=0):
+def iter_callables(obj, depth=0, seen=None):
     """Yield the code objects reachable from a module or class attribute."""
+    # Some objects (e.g. traceback._ShutdownTheme, a __getattr__-returns-self
+    # stand-in used during late interpreter shutdown on 3.15+) make every
+    # attribute access — including __func__/__wrapped__/etc. — resolve back
+    # to the object itself, which would otherwise recurse forever.
+    if seen is None:
+        seen = set()
+    if id(obj) in seen:
+        return
+    seen = seen | {id(obj)}
+
     # isinstance, not just "is not None": on a class such as types.FunctionType
     # the attribute resolves to the descriptor rather than to a code object.
     co = getattr(obj, "__code__", None)
@@ -135,7 +145,7 @@ def iter_callables(obj, depth=0):
     if isinstance(obj, type) and depth == 0:
         for name in dir(obj):
             try:
-                yield from iter_callables(inspect.getattr_static(obj, name), depth + 1)
+                yield from iter_callables(inspect.getattr_static(obj, name), depth + 1, seen)
             except AttributeError:
                 continue
     # Unwrap the descriptors that a bare getattr would hand back instead of a
@@ -143,7 +153,7 @@ def iter_callables(obj, depth=0):
     for attr in ("__func__", "__wrapped__", "fget", "fset", "fdel"):
         inner = getattr(obj, attr, None)
         if inner is not None:
-            yield from iter_callables(inner, depth)
+            yield from iter_callables(inner, depth, seen)
 
 
 def iter_module_functions(mod):
